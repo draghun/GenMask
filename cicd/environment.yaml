@@ -1,0 +1,17 @@
+name: gen_mask
+
+channels:
+ - defaults
+ - conda-forge
+
+dependencies:
+  - python=3.10
+  - pyvis
+  - geopy
+  - geopandas
+  - numpy
+  - rasterio
+  - shapely
+  - matplotlib
+  - osmnx
+  - pyyaml
