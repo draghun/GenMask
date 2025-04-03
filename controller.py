@@ -3,6 +3,10 @@ import os, json, yaml
 import geopandas as gpd
 from geopandas.geodataframe import GeoDataFrame
 import osmnx as ox
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 REGION_DICT_PATH = "region_dictionary.json"
 REGION_CONUS = "conus"
@@ -17,23 +21,31 @@ class RegionType(Enum):
 class Controller():
     
     def __init__(self, config_path = 'config.yaml'):
+        logger.info(f"Loading config at: {config_path}")
+        
         self.config = self._load_config(config_path)
         self.region = str(self.config.get("region"))
 
         if not self.region:
             raise ValueError("The configuration must include a 'region' key.")
 
+        logger.info(f"Loading region: {self.region}")
+
         self.gdf = None
         self._init_region()
 
     def _load_config(self, path):
+        logger.info(f"_load_config")
+
         if not os.path.exists(path):
-            raise FileNotFoundError(f"Config file '{path=}' does not exist.")
+            raise FileNotFoundError(f"Config file '{path}' does not exist.")
 
         with open(path, 'r') as file:
             return yaml.safe_load(file)
         
     def _init_region(self):
+        logger.info(f"_init_region")
+
         if os.path.exists(self.region) and self.region.endswith('.shp'):
             region_data = self.load_shapefile(self.region)
             self.gdf = region_data
@@ -45,6 +57,8 @@ class Controller():
 
     @staticmethod
     def load_shapefile(shapefile_path):
+        logger.info(f"load_shapefile")
+
         try:
             return gpd.read_file(shapefile_path)
         except Exception as exception:
@@ -52,6 +66,11 @@ class Controller():
         
     @staticmethod
     def load_conus():
+        logger.info(f"load_conus")
+
+        if not os.path.exists(REGION_DICT_PATH):
+            raise FileNotFoundError(f"Missing region dictionary at {REGION_DICT_PATH}")
+
         with open(REGION_DICT_PATH, 'r') as f:
             region_dict = json.load(f)
 
@@ -69,6 +88,8 @@ class Controller():
 
     @staticmethod
     def load_by_name(name, region_type = RegionType.CUSTOM):
+        logger.info(f"load_by_name")
+
         if (not region_type == RegionType.CUSTOM):
             with open(REGION_DICT_PATH, 'r') as f:
                 region_dict = json.load(f)
@@ -77,8 +98,9 @@ class Controller():
                 shapefile_path = region_dict[region_type]
                 region_data = Controller.load_shapefile(shapefile_path)
 
-                selected = region_data[str(region_data['name']).strip().lower() == 
-                                    name.strip().lower()]
+                region_data['name_clean'] = region_data['name'].str.strip().str.lower()
+                name_clean = name.strip().lower()
+                selected = region_data[region_data['name_clean'] == name_clean]
 
                 if (selected.empty):
                     raise ValueError(
@@ -94,9 +116,13 @@ class Controller():
                 raise ValueError(f"Region name '{name=}' not recognized or shapefile not found.")
     
     def get_region_data(self):
+        logger.info(f"get_region_data")
+
         return self.gdf
     
     def set_region_data(self, region_data: GeoDataFrame):
+        logger.info(f"set_region_data")
+
         self.gdf = region_data
 
 

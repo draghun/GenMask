@@ -2,10 +2,15 @@ import matplotlib.pyplot as plt
 import rasterio
 from rasterio.features import rasterize
 import numpy as np
+import logging
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 class Mask():
 
     def __init__(self, gdf, width=1024, height=1024):
+        logger.info(f"Initializing Mask: {width}, {height}")
+        
         self.gdf = gdf
         self.width = width
         self.height = height
@@ -13,6 +18,8 @@ class Mask():
 
     @staticmethod
     def _gen_mask(gdf, width, height):
+        logger.info(f"Generating Mask: {width}, {height}")
+
         bounds = gdf.total_bounds
 
         transform = rasterio.transform.from_bounds(*bounds, width, height)
@@ -26,7 +33,17 @@ class Mask():
         
         return mask
     
+    def save_region(self, path):
+        logger.info(f"saving region to file: {path}")
+
+        if (self.gdf):
+            self.gdf.to_file(path)
+        else:
+            raise ValueError("No region data loaded.")
+    
     def visualize(self):
+        logger.info(f"Visualizing mask")
+
         fig, ax = plt.subplots(figsize=(10, 10))
 
         plt.imshow(self.mask, cmap='gray', alpha=0.5)
@@ -38,7 +55,8 @@ class Mask():
         plt.show()
 
     def save(self, output_path):
-        """Optional: Save the raster mask as a GeoTIFF file."""
+        logger.info(f"Saving mask with GTiff driver: {output_path}")
+
         with rasterio.open(
             output_path,
             'w',
