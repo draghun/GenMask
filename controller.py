@@ -2,7 +2,6 @@ from enum import Enum
 import os, json, yaml
 import geopandas as gpd
 from geopandas.geodataframe import GeoDataFrame
-import osmnx as ox
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -111,8 +110,12 @@ class Controller():
                 raise ValueError(f"Region name '{name=}' shapefile not found.")
         else:
             try: 
+                import osmnx as ox
                 return ox.geocode_to_gdf(name)
-            except:
+            except ImportError as e:
+                logger.error(f"Need to install OSMNX to use this functionality")
+                raise e 
+            except Exception as e:
                 raise ValueError(f"Region name '{name=}' not recognized or shapefile not found.")
     
     def get_region_data(self):
