@@ -23,10 +23,16 @@ class Controller():
         logger.info(f"Loading config at: {config_path}")
         
         self.config = self._load_config(config_path)
-        self.region = str(self.config.get("region"))
 
-        if not self.region:
+        if ('region_name' in self.config):
+            self.region = str(self.config.get("region_name"))
+        else:
             raise ValueError("The configuration must include a 'region' key.")
+
+        if ('region_type' in self.config):
+            self.region_type = int(self.config.get('region_type'))
+        else:
+            self.region_type = RegionType.CUSTOM
 
         logger.info(f"Loading region: {self.region}")
 
@@ -48,8 +54,11 @@ class Controller():
         if os.path.exists(self.region) and self.region.endswith('.shp'):
             region_data = self.load_shapefile(self.region)
             self.gdf = region_data
+        elif self.region.strip().lower() == 'conus':
+            region_data = self.load_conus()
+            self.gdf = region_data
         else:
-            region_data = self.load_by_name(self.region)
+            region_data = self.load_by_name(self.region, self.region_type)
             self.gdf = region_data
 
         return region_data
@@ -73,7 +82,7 @@ class Controller():
         with open(REGION_DICT_PATH, 'r') as f:
             region_dict = json.load(f)
 
-        region_data = Controller.load_shapefile(region_dict[RegionType.PROVINCE])
+        region_data = Controller.load_shapefile(region_dict[RegionType.PROVINCE.value])
 
         us_states = region_data[region_data['adm0_a3'] == 'USA']
 
@@ -84,10 +93,18 @@ class Controller():
         conus = us_states[~us_states['name'].isin(non_conus)]
         
         return conus
+    
+    @staticmethod
+    def check_shapedf(shape_df):
+        shape_df.columns = map(str.lower, shape_df.columns)
+        if ('name' in shape_df.columns):
+            return True
+        else:
+            return False
 
     @staticmethod
     def load_by_name(name, region_type = RegionType.CUSTOM):
-        logger.info(f"load_by_name")
+        logger.info(f"load_by_name: {name}")
 
         if (not region_type == RegionType.CUSTOM):
             with open(REGION_DICT_PATH, 'r') as f:
@@ -97,15 +114,16 @@ class Controller():
                 shapefile_path = region_dict[region_type]
                 region_data = Controller.load_shapefile(shapefile_path)
 
-                region_data['name_clean'] = region_data['name'].str.strip().str.lower()
-                name_clean = name.strip().lower()
-                selected = region_data[region_data['name_clean'] == name_clean]
+                if (Controller.check_shapedf(region_data)):
+                    region_data['name_clean'] = region_data['name'].str.strip().str.lower()
+                    name_clean = name.strip().lower()
+                    selected = region_data[region_data['name_clean'] == name_clean]
 
-                if (selected.empty):
-                    raise ValueError(
-                        f"Region name {name=} could not be found based on region type")
+                    if (selected.empty):
+                        raise ValueError(
+                            f"Region name {name=} could not be found based on region type")
 
-                return selected
+                    return selected
             except:
                 raise ValueError(f"Region name '{name=}' shapefile not found.")
         else:
