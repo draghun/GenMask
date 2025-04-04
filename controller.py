@@ -96,6 +96,9 @@ class Controller():
     
     @staticmethod
     def check_shapedf(shape_df):
+
+        logger.info(f"checking dataframe for name: {shape_df.columns}")
+
         shape_df.columns = map(str.lower, shape_df.columns)
         if ('name' in shape_df.columns):
             return True
@@ -121,11 +124,13 @@ class Controller():
 
                     if (selected.empty):
                         raise ValueError(
-                            f"Region name {name=} could not be found based on region type")
+                            f"Region name {name} could not be found based on region type")
 
                     return selected
+                else:
+                    raise ValueError(f"Region name '{name}' shapefile not found.")
             except:
-                raise ValueError(f"Region name '{name=}' shapefile not found.")
+                raise ValueError(f"Region name '{name}' shapefile not found.")
         else:
             try: 
                 import osmnx as ox
